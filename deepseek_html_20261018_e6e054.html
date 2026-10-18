@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PixMotion — AI Video Studio</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --bg:#0a0c12; --panel:#12151f; --panel2:#171b28; --line:#232838;
+    --text:#e8ebf3; --muted:#8b93ab; --a1:#7c5cff; --a2:#22d3ee;
+  }
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text); min-height:100vh;
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 8% -10%, #1b1444 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, #06283a 0%, transparent 55%),
+      var(--bg);
+  }
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:22px 28px; border-bottom:1px solid var(--line);
+    backdrop-filter: blur(8px);
+  }
+  .logo{display:flex; align-items:center; gap:14px}
+  .mark{
+    width:44px;height:44px;border-radius:13px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--a1),var(--a2));
+    color:#06070c;font-size:17px;font-weight:900;
+    box-shadow:0 10px 30px -10px var(--a1);
+  }
+  .logo h1{font-size:18px;margin:0;letter-spacing:-.02em}
+  .logo p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+  .badge{
+    font-size:12px;color:#a8ffdd;border:1px solid #1d5544;background:#0e2a22;
+    padding:7px 13px;border-radius:999px;white-space:nowrap;
+  }
+  /* ---------- layout ---------- */
+  .app{
+    display:grid;grid-template-columns:minmax(360px,430px) 1fr;gap:20px;
+    padding:22px 28px 60px;max-width:1500px;margin:0 auto;align-items:start;
+  }
+  .col{display:flex;flex-direction:column;gap:16px;min-width:0}
+  @media (max-width:980px){ .app{grid-template-columns:1fr} .topbar{flex-wrap:wrap} }
+  /* ---------- cards ---------- */
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line); border-radius:18px; padding:18px;
+    box-shadow:0 24px 60px -40px #000;
+  }
+  .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .card-head h2{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:700}
+  .count{
+    font-size:12px;color:var(--text);background:#1d2233;border:1px solid var(--line);
+    border-radius:999px;padding:3px 10px;font-weight:600;
+  }
+  /* ---------- dropzone ---------- */
+  .dropzone{
+    border:1.5px dashed #2e3550;border-radius:14px;padding:26px 16px;text-align:center;
+    cursor:pointer;transition:.18s;background:#0e1119;
+  }
+  .dropzone:hover,.dropzone.over{border-color:var(--a1);background:#131832;transform:translateY(-1px)}
+  .dropzone svg{width:30px;height:30px;stroke:var(--a1);fill:none;stroke-width:1.6;margin-bottom:8px}
+  .dropzone p{margin:0;font-size:13.5px}
+  .dropzone strong{color:#fff}
+  .dropzone span{display:block;font-size:11.5px;color:var(--muted);margin-top:4px}
+  /* ---------- thumbs ---------- */
+  .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px;margin-top:12px}
+  .thumb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#0b0e15}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb .x{
+    position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;border:none;
+    background:rgba(0,0,0,.72);color:#fff;font-size:13px;line-height:1;cursor:pointer;display:grid;place-items:center;
+  }
+  .thumb .x:hover{background:#ff4d6d}
+  .thumb .n{
+    position:absolute;bottom:3px;left:3px;font-size:10px;font-weight:700;
+    background:rgba(0,0,0,.7);padding:1px 6px;border-radius:5px;
+  }
+  /* ---------- form bits ---------- */
+  textarea,input[type=text],input[type=password],select{
+    width:100%;background:#0d1018;border:1px solid var(--line);border-radius:11px;
+    color:var(--text);padding:11px 13px;font:inherit;font-size:13.5px;outline:none;transition:.15s;
+  }
+  textarea{resize:vertical;min-height:92px;line-height:1.5}
+  textarea:focus,input:focus,select:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(124,92,255,.16)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .chip{
+    font-size:11.5px;color:#b9c0d4;background:#1a1f2e;border:1px solid var(--line);
+    border-radius:999px;padding:5px 11px;cursor:pointer;transition:.15s;
+  }
+  .chip:hover{color:#fff;border-color:var(--a1);background:#221a3f}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:420px){ .grid2{grid-template-columns:1fr} }
+  label.fld{display:block;font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.03em}
+  label.fld > *{margin-top:6px}
+  .rowline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;font-size:13px}
+  .switch{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:#c9cfe0}
+  .switch input{appearance:none;width:38px;height:21px;border-radius:999px;background:#2a3145;position:relative;cursor:pointer;transition:.18s;flex:0 0 auto}
+  .switch input::after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#8b93ab;transition:.18s}
+  .switch input:checked{background:linear-gradient(135deg,var(--a1),var(--a2))}
+  .switch input:checked::after{left:20px;background:#fff}
+  input[type=range]{-webkit-appearance:none;width:100%;height:5px;border-radius:99px;background:#242b3d;outline:none;padding:0}
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:17px;height:17px;border-radius:50%;cursor:pointer;
+    background:linear-gradient(135deg,var(--a1),var(--a2));border:2px solid #0b0e15;
+  }
+  /* ---------- buttons ---------- */
+  .primary{
+    width:100%;border:none;border-radius:13px;padding:15px;font:inherit;font-size:14.5px;font-weight:800;
+    color:#07080d;cursor:pointer;letter-spacing:.01em;
+    background:linear-gradient(135deg,var(--a1),var(--a2));
+    box-shadow:0 16px 40px -18px var(--a1);transition:.18s;
+  }
+  .primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 22px 46px -16px var(--a1)}
+  .primary:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
+  .ghost{
+    border:1px solid var(--line);background:#141926;color:#c3cadb;border-radius:12px;
+    padding:13px 18px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s;
+  }
+  .ghost:hover{border-color:#3a4460;color:#fff}
+  /* ---------- stage ---------- */
+  .stage{
+    position:relative;border-radius:14px;overflow:hidden;background:#05070c;
+    border:1px solid var(--line);aspect-ratio:16/9;display:grid;place-items:center;
+  }
+  .stage canvas,.stage video{width:100%;height:100%;object-fit:contain;display:block}
+  .placeholder{
+    position:absolute;inset:0;display:grid;place-items:center;text-align:center;
+    color:#59617a;font-size:13.5px;padding:20px;pointer-events:none;line-height:1.6;
+  }
+  .placeholder .big{font-size:34px;display:block;margin-bottom:10px;opacity:.5}
+  .progress{height:5px;border-radius:99px;background:#1b2030;margin-top:14px;overflow:hidden}
+  .progress div{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--a1),var(--a2));transition:width .1s linear}
+  .actions{display:flex;gap:10px;margin-top:14px}
+  .actions .primary{flex:1}
+  .hint{font-size:11.5px;color:var(--muted);margin:10px 0 0;line-height:1.6}
+  #status{font-size:11.5px;color:var(--muted);font-weight:600}
+  /* ---------- api details ---------- */
+  details.api summary{
+    cursor:pointer;font-size:13px;font-weight:700;color:#b9c0d4;list-style:none;
+    display:flex;align-items:center;gap:8px;
+  }
+  details.api summary::-webkit-details-marker{display:none}
+  details.api summary::before{content:"▸";color:var(--a2);transition:.2s;display:inline-block}
+  details.api[open] summary::before{transform:rotate(90deg)}
+  details.api > *:not(summary){margin-top:12px}
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);
+    background:#1b2130;border:1px solid #313a54;color:#fff;padding:12px 20px;border-radius:12px;
+    font-size:13.5px;opacity:0;pointer-events:none;transition:.25s;z-index:99;
+    box-shadow:0 20px 50px -20px #000;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">
+    <div class="mark">▶</div>
+    <div>
+      <h1>PixMotion</h1>
+      <p>Photos + prompt → downloadable video</p>
+    </div>
+  </div>
+  <div class="badge">● 1080p · 20s · rendered in your browser</div>
+</header>
+
+<main class="app">
+  <!-- ============ LEFT COLUMN ============ -->
+  <section class="col">
+
+    <!-- images -->
+    <div class="card">
+      <div class="card-head">
+        <h2>1 · Your images</h2>
+        <span class="count" id="imgCount">0</span>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5l5 5"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <p><strong>Click to upload</strong> or drag &amp; drop</p>
+        <span>PNG · JPG · WebP — multiple allowed</span>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden />
+      </div>
+
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+
+    <!-- prompt -->
+    <div class="card">
+      <div class="card-head"><h2>2 · Prompt</h2></div>
+      <textarea id="prompt" placeholder="Describe the video you want… e.g. 'cinematic slow drift through a neon city at night, moody purple lighting'"></textarea>
+      <div class="chips" id="chips">
+        <button class="chip" data-p="cinematic slow pan, dramatic lighting, shallow depth of field">cinematic</button>
+        <button class="chip" data-p="dreamy soft glow, pastel colors, gentle drift">dreamy</button>
+        <button class="chip" data-p="neon cyberpunk night, rain, reflective streets">cyberpunk</button>
+        <button class="chip" data-p="golden hour sunlight, warm tones, slow push in">golden hour</button>
+        <button class="chip" data-p="epic drone shot, sweeping camera move, 4k">drone shot</button>
+      </div>
+    </div>
+
+    <!-- settings -->
+    <div class="card">
+      <div class="card-head"><h2>3 · Settings</h2></div>
+
+      <div class="grid2">
+        <label class="fld">Aspect ratio
+          <select id="aspect">
+            <option value="16:9">16:9 — Landscape</option>
+            <option value="9:16">9:16 — Vertical / Reels</option>
+            <option value="1:1">1:1 — Square</option>
+          </select>
+        </label>
+        <label class="fld">Video length — <span id="durVal">20s</span>
+          <input type="range" id="duration" min="5" max="60" step="5" value="20" />
+        </label>
+      </div>
+
+      <div class="grid2" style="margin-top:12px">
+        <label class="fld">Camera motion
+          <select id="motion">
+            <option value="alternate">Alternate zoom in/out</option>
+            <option value="zoom-in">Zoom in</option>
+            <option value="zoom-out">Zoom out</option>
+          </select>
+        </label>
+        <label class="fld">Transition
+          <select id="transition">
+            <option value="fade">Crossfade</option>
+            <option value="none">Hard cut</option>
+          </select>
+        </label>
+      </div>
+
+      <label class="fld" style="margin-top:12px">Download quality
+        <select id="quality">
+          <option value="good">Good — 10 Mbps</option>
+          <option value="verygood" selected>Very good — 20 Mbps (recommended)</option>
+          <option value="ultra">Ultra — 40 Mbps (large file)</option>
+        </select>
+      </label>
+
+      <div class="rowline">
+        <label class="switch"><input type="checkbox" id="showPrompt" checked /> Burn prompt text into the video</label>
+      </div>
+      <div class="rowline">
+        <label class="switch"><input type="checkbox" id="vignette" checked /> Cinematic vignette</label>
+      </div>
+
+      <p class="hint" id="speedNote"></p>
+    </div>
+
+    <button class="primary" id="generateBtn">⚡ Generate video</button>
+  </section>
+
+  <!-- ============ RIGHT COLUMN ============ -->
+  <section class="col">
+    <div class="card">
+      <div class="card-head">
+        <h2>Preview</h2>
+        <span id="status">Idle</span>
+      </div>
+
+      <div class="stage" id="stage">
+        <canvas id="canvas" width="1920" height="1080"></canvas>
+        <video id="video" controls playsinline hidden></video>
+        <div class="placeholder" id="placeholder">
+          <div>
+            <span class="big">🎬</span>
+            Add images and press <strong>Generate video</strong>.<br />
+            Your render will appear here — ready to download.
+          </div>
+        </div>
+      </div>
+
+      <div class="progress"><div id="bar"></div></div>
+
+      <div class="actions">
+        <button class="primary" id="downloadBtn" disabled>⬇ Download video</button>
+        <button class="ghost" id="resetBtn">New render</button>
+      </div>
+
+      <p class="hint" id="fileInfo"></p>
+    </div>
+
+    <!-- optional real AI API -->
+    <details class="card api">
+      <summary>Advanced · Connect a real AI video API (optional)</summary>
+      <p class="hint" style="margin-top:0">
+        The renderer above is fully real and offline. If you own an AI video service
+        (Replicate, Runway, Luma, your own GPU box…) expose it behind a small proxy
+        that accepts <code>POST {prompt, images[]}</code> and returns
+        <code>{ "video_url": "https://…" }</code>, then paste that proxy URL here.
+        A browser can’t call those APIs directly because of CORS + secret-key safety.
+      </p>
+      <label class="fld">Proxy endpoint URL
+        <input type="text" id="apiEndpoint" placeholder="https://your-server.com/api/generate-video" />
+      </label>
+      <label class="fld" style="margin-top:10px">Bearer token (optional)
+        <input type="password" id="apiKey" placeholder="sk-…" />
+      </label>
+      <button class="ghost" id="aiBtn" style="width:100%;margin-top:12px">🚀 Generate with my AI API</button>
+      <p class="hint" id="aiStatus"></p>
+    </details>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   PixMotion — real in-browser video renderer
+   ========================================================= */
+const $ = (s) => document.querySelector(s);
+
+const state = {
+  images: [],        // { url, img, name }
+  generating: false,
+  blob: null,
+  mime: 'video/webm',
+};
+
+const els = {
+  dropzone:   $('#dropzone'),
+  fileInput:  $('#fileInput'),
+  thumbs:     $('#thumbs'),
+  imgCount:   $('#imgCount'),
+  prompt:     $('#prompt'),
+  aspect:     $('#aspect'),
+  duration:   $('#duration'),
+  durVal:     $('#durVal'),
+  motion:     $('#motion'),
+  transition: $('#transition'),
+  quality:    $('#quality'),
+  speedNote:  $('#speedNote'),
+  showPrompt: $('#showPrompt'),
+  vignette:   $('#vignette'),
+  canvas:     $('#canvas'),
+  video:      $('#video'),
+  placeholder:$('#placeholder'),
+  stage:      $('#stage'),
+  bar:        $('#bar'),
+  status:     $('#status'),
+  fileInfo:   $('#fileInfo'),
+  generateBtn:$('#generateBtn'),
+  downloadBtn:$('#downloadBtn'),
+  resetBtn:   $('#resetBtn'),
+  toast:      $('#toast'),
+};
+
+const ctx = els.canvas.getContext('2d', { alpha: false });
+ctx.imageSmoothingEnabled = true;
+ctx.imageSmoothingQuality = 'high';
+
+/* ---------------- tiny helpers ---------------- */
+let toastTimer;
+function toast(msg) {
+  els.toast.textContent = msg;
+  els.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2600);
+}
+function fmtBytes(b) {
+  if (!b) return '0 B';
+  const u = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(b) / Math.log(1024));
+  return (b / Math.pow(1024, i)).toFixed(i ? 1 : 0) + ' ' + u[i];
+}
+function setStatus(t) { els.status.textContent = t; }
+
+/* ---------------- image upload ---------------- */
+els.dropzone.addEventListener('click', () => els.fileInput.click());
+els.fileInput.addEventListener('change', (e) => {
+  addFiles(e.target.files);
+  e.target.value = '';
+});
+['dragenter', 'dragover'].forEach(ev =>
+  els.dropzone.addEventListener(ev, (e) => {
+    e.preventDefault();
+    els.dropzone.classList.add('over');
+  })
+);
+['dragleave', 'drop'].forEach(ev =>
+  els.dropzone.addEventListener(ev, (e) => {
+    e.preventDefault();
+    els.dropzone.classList.remove('over');
+  })
+);
+els.dropzone.addEventListener('drop', (e) => addFiles(e.dataTransfer.files));
+
+async function addFiles(fileList) {
+  const files = [...fileList].filter(f => f.type.startsWith('image/'));
+  if (!files.length) { toast('Please choose image files.'); return; }
+
+  for (const file of files) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.src = url;
+    try { await img.decode(); }
+    catch { URL.revokeObjectURL(url); continue; }
+    state.images.push({ url, img, name: file.name });
+  }
+  renderThumbs();
+}
+
+function renderThumbs() {
+  els.thumbs.innerHTML = '';
+  state.images.forEach((it, i) => {
+    const el = document.createElement('div');
+    el.className = 'thumb';
+    el.innerHTML = `<img src="${it.url}" alt="">
+                    <span class="n">${i + 1}</span>
+                    <button class="x" title="Remove">×</button>`;
+    el.querySelector('.x').addEventListener('click', () => {
+      URL.revokeObjectURL(it.url);
+      state.images.splice(i, 1);
+      renderThumbs();
+    });
+    els.thumbs.appendChild(el);
+  });
+  els.imgCount.textContent = state.images.length;
+  updateSpeedNote();
+}
+
+/* ---------------- prompt chips ---------------- */
+$('#chips').addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  const t = chip.dataset.p;
+  els.prompt.value = els.prompt.value.trim()
+    ? els.prompt.value.trim() + ', ' + t
+    : t;
+  els.prompt.focus();
+});
+
+/* ---------------- duration slider + note ---------------- */
+function updateSpeedNote() {
+  const n = state.images.length;
+  const total = parseFloat(els.duration.value);
+  if (!n) {
+    els.speedNote.textContent = `Total length: ${total}s — add images to see timing.`;
+    return;
+  }
+  const per = total / n;
+  els.speedNote.textContent =
+    `Total length: ${total}s · ${n} image${n > 1 ? 's' : ''} · ≈ ${per.toFixed(1)}s per image`;
+}
+
+els.duration.addEventListener('input', () => {
+  els.durVal.textContent = els.duration.value + 's';
+  updateSpeedNote();
+});
+
+/* =========================================================
+   RENDERING ENGINE
+   ========================================================= */
+
+const DIMS = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1440, 1440] };
+
+/* quality → bitrate (Mbps) measured at 1920×1080, scaled by pixel count */
+const QUALITY = {
+  good:     { mbps: 10, fps: 30 },
+  verygood: { mbps: 20, fps: 30 },
+  ultra:    { mbps: 40, fps: 30 },
+};
+
+/** Draw one image with Ken-Burns motion, cover-fit into the canvas. */
+function drawImageKen(i, p, alpha, w, h, motionMode) {
+  const item = state.images[i];
+  if (!item || !item.img.complete) return;
+  const img = item.img;
+
+  const dir = motionMode === 'zoom-in' ? 1
+            : motionMode === 'zoom-out' ? -1
+            : (i % 2 === 0 ? 1 : -1);
+
+  const zoom = dir > 0 ? 1 + 0.14 * p : 1.14 - 0.14 * p;
+  const panX = Math.cos(i * 1.9) * (p - 0.5) * 0.30;
+  const panY = Math.sin(i * 2.3) * (p - 0.5) * 0.18;
+
+  const scale = Math.max(w / img.width, h / img.height) * zoom;
+  const dw = img.width * scale;
+  const dh = img.height * scale;
+  const dx = (w - dw) / 2 + panX * (w - dw) / 2;
+  const dy = (h - dh) / 2 + panY * (h - dh) / 2;
+
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(img, dx, dy, dw, dh);
+  ctx.globalAlpha = 1;
+}
+
+function wrapText(text, maxW, maxLines) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = '';
+  for (const word of words) {
+    const test = cur ? cur + ' ' + word : word;
+    if (ctx.measureText(test).width > maxW && cur) {
+      lines.push(cur);
+      cur = word;
+      if (lines.length === maxLines) break;
+    } else {
+      cur = test;
+    }
+  }
+  if (lines.length < maxLines && cur) lines.push(cur);
+  return lines.slice(0, maxLines);
+}
+
+function drawPromptText(w, h) {
+  const text = els.prompt.value.trim();
+  if (!text) return;
+
+  const pad = Math.round(w * 0.055);
+  const fontSize = Math.round(w * 0.027);
+  ctx.font = `700 ${fontSize}px Inter, system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const lines = wrapText(text, w - pad * 2, 3);
+  if (!lines.length) return;
+
+  const lineH = fontSize * 1.4;
+  const blockH = lines.length * lineH;
+  const topY = h - pad - blockH;
+
+  const g = ctx.createLinearGradient(0, topY - fontSize * 1.5, 0, h);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.88)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, topY - fontSize * 1.5, w, h - topY + fontSize * 1.5);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.96)';
+  ctx.shadowColor = 'rgba(0,0,0,0.7)';
+  ctx.shadowBlur = 10;
+  lines.forEach((ln, i) => {
+    ctx.fillText(ln, w / 2, topY + lineH * (i + 0.5));
+  });
+  ctx.shadowBlur = 0;
+}
+
+/* cached vignette gradient (expensive to rebuild each frame at 1080p) */
+let vigCache = { key: '', grad: null };
+function drawVignette(w, h) {
+  const key = w + 'x' + h;
+  if (vigCache.key !== key) {
+    const g = ctx.createRadialGradient(
+      w / 2, h / 2, Math.min(w, h) * 0.32,
+      w / 2, h / 2, Math.max(w, h) * 0.78
+    );
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.38)');
+    vigCache = { key, grad: g };
+  }
+  ctx.fillStyle = vigCache.grad;
+  ctx.fillRect(0, 0, w, h);
+}
+
+/** Master frame painter — given time t (seconds) paints exactly that frame. */
+function drawFrame(t, cfg) {
+  const { w, h } = els.canvas;
+  const per = cfg.per;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+
+  const idx = Math.min(state.images.length - 1, Math.floor(t / per));
+  const local = Math.min(1, (t - idx * per) / per);
+
+  drawImageKen(idx, local, 1, w, h, cfg.motion);
+
+  // crossfade into the next image near the end of this slot
+  if (cfg.transition === 'fade' && idx < state.images.length - 1) {
+    const fadeDur = Math.min(1.0, per * 0.4);
+    const timeLeft = per * (1 - local);
+    if (timeLeft < fadeDur) {
+      const a = 1 - timeLeft / fadeDur;
+      drawImageKen(idx + 1, 0, a, w, h, cfg.motion);
+    }
+  }
+
+  if (cfg.vignette) drawVignette(w, h);
+  if (cfg.showPrompt) drawPromptText(w, h);
+}
+
+/* =========================================================
+   GENERATE  →  MediaRecorder  →  Blob  →  Download
+   ========================================================= */
+els.generateBtn.addEventListener('click', generate);
+
+async function generate() {
+  if (state.generating) return;
+
+  if (!state.images.length) { toast('Add at least one image first.'); return; }
+  if (typeof MediaRecorder === 'undefined') {
+    toast('Your browser does not support video recording. Try Chrome/Edge/Firefox.');
+    return;
+  }
+
+  /* ---- total length is fixed by the slider (default 20s) ---- */
+  const totalSec = parseFloat(els.duration.value);
+  const per = totalSec / state.images.length;   // seconds each image gets
+
+  const cfg = {
+    per,
+    motion: els.motion.value,
+    transition: els.transition.value,
+    showPrompt: els.showPrompt.checked,
+    vignette: els.vignette.checked,
+  };
+
+  const q = QUALITY[els.quality.value] || QUALITY.verygood;
+  const fps = q.fps;
+
+  // --- canvas dimensions ---
+  const [w, h] = DIMS[els.aspect.value];
+  els.canvas.width = w;
+  els.canvas.height = h;
+  els.stage.style.aspectRatio = `${w} / ${h}`;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  vigCache.key = '';   // force rebuild for new size
+
+  // bitrate scaled to resolution (reference = 1920×1080)
+  const bitrate = Math.round(q.mbps * 1e6 * ((w * h) / (1920 * 1080)));
+
+  // --- reset UI ---
+  state.generating = true;
+  els.generateBtn.disabled = true;
+  els.generateBtn.textContent = '⏳ Rendering…';
+  els.downloadBtn.disabled = true;
+  els.video.hidden = true;
+  els.video.removeAttribute('src');
+  els.canvas.style.display = 'block';
+  els.placeholder.style.display = 'none';
+  els.bar.style.width = '0%';
+  els.fileInfo.textContent = '';
+  setStatus('Rendering…');
+
+  try {
+    // --- pick a supported container ---
+    const candidates = [
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+      'video/mp4',
+    ];
+    const mime = candidates.find(m => MediaRecorder.isTypeSupported(m)) || '';
+    state.mime = mime || 'video/webm';
+
+    const stream = els.canvas.captureStream(fps);
+    const recorder = new MediaRecorder(
+      stream,
+      mime
+        ? { mimeType: mime, videoBitsPerSecond: bitrate }
+        : { videoBitsPerSecond: bitrate }
+    );
+
+    const chunks = [];
+    recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(res => { recorder.onstop = res; });
+
+    // paint the very first frame before we start capturing
+    drawFrame(0, cfg);
+    await new Promise(r => setTimeout(r, 150));
+
+    recorder.start();
+
+    // ---- real-time animation loop ----
+    await new Promise((resolve) => {
+      const t0 = performance.now();
+      function tick(now) {
+        const t = Math.min((now - t0) / 1000, totalSec);
+        drawFrame(t, cfg);
+
+        const pct = Math.round((t / totalSec) * 100);
+        els.bar.style.width = pct + '%';
+        setStatus(`Rendering… ${pct}%`);
+
+        if (t >= totalSec) { resolve(); return; }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+
+    // let the last frames flush
+    await new Promise(r => setTimeout(r, 300));
+    recorder.stop();
+    await stopped;
+    stream.getTracks().forEach(t => t.stop());
+
+    // ---- build the file ----
+    const blob = new Blob(chunks, { type: state.mime });
+    if (!blob.size) throw new Error('Empty recording — try a different browser.');
+
+    state.blob = blob;
+
+    const url = URL.createObjectURL(blob);
+    els.video.src = url;
+    els.video.hidden = false;
+    els.canvas.style.display = 'none';
+    els.video.load();
+
+    els.downloadBtn.disabled = false;
+    els.fileInfo.textContent =
+      `✅ Ready — ${state.images.length} image(s) · ${totalSec.toFixed(0)}s · ` +
+      `${w}×${h} · ${fps} fps · ~${Math.round(bitrate / 1e6)} Mbps · ` +
+      `${fmtBytes(blob.size)} · ${state.mime.split(';')[0]}`;
+
+    els.bar.style.width = '100%';
+    setStatus('Done ✔');
+    toast('Video generated — hit Download!');
+
+  } catch (err) {
+    console.error(err);
+    setStatus('Error');
+    toast('Render failed: ' + err.message);
+    els.placeholder.style.display = 'grid';
+  } finally {
+    state.generating = false;
+    els.generateBtn.disabled = false;
+    els.generateBtn.textContent = '⚡ Generate video';
+  }
+}
+
+/* ---------------- DOWNLOAD (the real deal) ---------------- */
+els.downloadBtn.addEventListener('click', downloadVideo);
+
+function downloadVideo() {
+  if (!state.blob) { toast('Generate a video first.'); return; }
+
+  const ext = state.mime.includes('mp4') ? 'mp4' : 'webm';
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const filename = `pixmotion-${stamp}.${ext}`;
+
+  const url = URL.createObjectURL(state.blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  // give the browser time to start the download before revoking
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  toast('Downloading ' + filename);
+}
+
+/* ---------------- reset ---------------- */
+els.resetBtn.addEventListener('click', () => {
+  if (state.generating) return;
+  els.video.pause();
+  els.video.hidden = true;
+  els.video.removeAttribute('src');
+  els.canvas.style.display = 'block';
+  els.placeholder.style.display = 'grid';
+  els.bar.style.width = '0%';
+  els.downloadBtn.disabled = true;
+  els.fileInfo.textContent = '';
+  setStatus('Idle');
+  state.blob = null;
+});
+
+/* =========================================================
+   OPTIONAL: call your own AI video backend
+   ========================================================= */
+$('#aiBtn').addEventListener('click', async () => {
+  const endpoint = $('#apiEndpoint').value.trim();
+  const key = $('#apiKey').value.trim();
+  const aiStatus = $('#aiStatus');
+
+  if (!endpoint) { toast('Paste your proxy endpoint URL first.'); return; }
+  if (!state.images.length) { toast('Add images first.'); return; }
+
+  aiStatus.textContent = 'Uploading images and prompt…';
+  $('#aiBtn').disabled = true;
+
+  try {
+    const images = await Promise.all(state.images.map(it => fileToDataURL(it.url)));
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(key ? { Authorization: 'Bearer ' + key } : {}),
+      },
+      body: JSON.stringify({
+        prompt: els.prompt.value.trim(),
+        images,
+        aspect_ratio: els.aspect.value,
+        duration: parseFloat(els.duration.value),
+        quality: els.quality.value,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (!data.video_url) throw new Error('Response had no "video_url" field.');
+
+    aiStatus.textContent = '✅ Video ready — fetching file for download…';
+    els.video.hidden = false;
+    els.canvas.style.display = 'none';
+    els.placeholder.style.display = 'none';
+    els.video.src = data.video_url;
+
+    // try to fetch it as a blob so the download button works cross-origin too
+    try {
+      const vres = await fetch(data.video_url);
+      if (!vres.ok) throw new Error('blocked');
+      const vblob = await vres.blob();
+      state.blob = vblob;
+      state.mime = vblob.type || 'video/mp4';
+      els.downloadBtn.disabled = false;
+      els.fileInfo.textContent = `✅ AI video · ${fmtBytes(vblob.size)}`;
+    } catch {
+      // CORS blocked → still give them a working link
+      els.downloadBtn.onclick = () => window.open(data.video_url, '_blank');
+      els.downloadBtn.disabled = false;
+      els.fileInfo.textContent = '✅ AI video ready (opens in a new tab to save).';
+    }
+    toast('AI video generated!');
+  } catch (err) {
+    console.error(err);
+    aiStatus.textContent = '❌ ' + err.message +
+      ' — check the endpoint URL, CORS headers and your token.';
+  } finally {
+    $('#aiBtn').disabled = false;
+  }
+});
+
+function fileToDataURL(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url);
+    xhr.responseType = 'blob';
+    xhr.onload = () => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = reject;
+      fr.readAsDataURL(xhr.response);
+    };
+    xhr.onerror = reject;
+    xhr.send();
+  });
+}
+
+/* ---------------- initial paint ---------------- */
+(function initCanvas() {
+  const { width: w, height: h } = els.canvas;
+  ctx.fillStyle = '#070a11';
+  ctx.fillRect(0, 0, w, h);
+})();
+updateSpeedNote();
+
+/* warn before leaving mid-render */
+window.addEventListener('beforeunload', (e) => {
+  if (state.generating) { e.preventDefault(); e.returnValue = ''; }
+});
+</script>
+</body>
+</html>
